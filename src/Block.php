@@ -8,8 +8,8 @@ namespace PDFParser;
  */
 class Block
 {
-    public static $catch = 'fitry';
-    public static $debug = true;
+    public static $catch = null;
+    public static $debug = false;
     private static $continuedByCallback = null;
     private static $replacements = [];
 

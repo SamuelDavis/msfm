@@ -15,6 +15,7 @@ $symbols = [
     "ɻ" => "fl",
 ];
 
+
 $replaceText = array_merge(PDFParser::findReplacements($raw, $symbols), [
     "’" => "'",
     "‘" => "'",
@@ -29,6 +30,55 @@ $replaceText = array_merge(PDFParser::findReplacements($raw, $symbols), [
     "concept.12" => "concept.",
     "affrm" => "affirm",
     "diffcult" => "difficult",
+    "suffcient" => "sufficient",
+    "offcially" => "officially",
+    "offcer" => "officer",
+    "a ictions" => "afflictions",
+    "fitry" => "try",
+    "fitake" => "take",
+    "fithink" => "think",
+    "fithreaten" => "threaten",
+    " nger" => " finger",
+    "figers" => " fingers",
+    "mateial" => "material",
+    "prisonrs" => "prisoners",
+    "susected" => "suspected",
+    "percentge" => "percentage",
+    " rst " => " first ",
+    "reacions" => "reactions",
+    "advanage" => "advantage",
+    "fially" => "finally",
+    "jourey" => "journey",
+    "reaon" => "reason",
+    "cariage" => "carriage",
+    "coffn" => "coffin",
+    "uctuated" => "punctuated",
+    "continully" => "continually",
+    "docor" => "doctor",
+    "peole" => "people",
+    "saboage" => "sabotage",
+    "failre" => "failure",
+    "thirtyst" => "thirty-first",
+    " nally" => " finally",
+    "offce" => "office",
+    "hosital" => "hospital",
+    "diferent" => "different",
+    "Docor" => "Doctor",
+    "sixtye" => "sixty",
+    "hyperntention" => "hyper-tension",
+    "paradoxial" => "paradoxical",
+    "hypere ection" => "hyper-reaction",
+    "vacum" => "vacuum",
+    "puruit" => "persuit",
+    "capabilty" => "capability",
+    "faal" => "fatal",
+    "indusrial" => "industrial",
+    "empirial" => "emperical",
+    "suffce" => "suffice",
+    "surival" => "survival",
+    "twentye" => "twenty",
+    "proli c" => "prolific",
+    "offcial" => "official",
 ]);
 
 Block::setContinuedByCallback(function (Block $a, Block $b) {
@@ -47,5 +97,7 @@ $result = array_reduce($blocks, function (array $result, Block $block): array {
         : array_push($result, $block);
     return $result;
 }, [$first]);
+
+dd($result);
 
 dd(implode("\n\t", $result));
