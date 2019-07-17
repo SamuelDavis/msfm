@@ -1,0 +1,19 @@
+{
+  "name": "samueldavis/msfm",
+  "authors": [
+    {
+      "name": "Samuel Davis",
+      "email": "samueljakdavis@gmail.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "PDFParser\\": "src/"
+    },
+    "files": [
+      "src/functions.php"
+    ]
+  },
+  "require": {
+  }
+}
