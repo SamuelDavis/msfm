@@ -1,77 +1,54 @@
 <?php
 
-namespace PDFParser;
+namespace Books\Parsers;
 
+use Books\Models\Block;
+use Books\Models\Book;
 use DOMDocument;
 use DOMElement;
 use DOMNode;
 use DOMXPath;
-use LogicException;
 
-class PDFParser extends DOMDocument
+class BlockParser extends DOMDocument
 {
-    private $styles;
     private $xPath;
+    private $pageStyles;
 
-    public function __construct($version = '', $encoding = '')
-    {
-        parent::__construct($version, $encoding);
-        libxml_use_internal_errors(true);
-    }
-
-    public static function findReplacements(string $rawText, array $symbols, int $before = 2, int $after = null): array
-    {
-        $after = str_repeat("[^.!\s\"]* *", $after ?? $before);
-        $before = str_repeat("[^.!\s\"]* *", $before);
-        $replacements = [];
-        foreach ($symbols as $symbol => $replacement) {
-            $pattern = "/{$before}{$symbol}{$after}/";
-            preg_match_all($pattern, $rawText, $matches);
-            $matches = reset($matches);
-            $replacements = array_reduce($matches, function (array $acc, string $match) use ($symbol, $replacement) {
-                $key = preg_replace("/ ?{$symbol} ?/", ' ', $match);
-                $value = str_replace($symbol, $replacement, $match);
-                if (array_key_exists($key, $acc) && $value !== $acc[$key]) {
-                    throw new LogicException("Duplicate replacement key [{$key}] with value [{$value}]");
-                }
-                return [$key => $value] + $acc;
-            }, $replacements);
-        }
-        return $replacements;
-    }
-
-    /**
-     * @param string $dir
-     * @return Block[]
-     */
-    public function getBlocks(string $dir): array
+    public function __invoke(string $dir, Book $book = null)
     {
         $files = scandir($dir);
         usort($files, function (string $a, string $b) {
-            return intval(preg_replace('/[^0-9]/', '', $a))
-                - intval(preg_replace('/[^0-9]/', '', $b));
+            [$a, $b] = array_map(function (string $file) {
+                return intval(preg_replace('/[^0-9]/', '', $file));
+            }, [$a, $b]);
+            return $a - $b;
         });
-        return array_reduce($files, function (array $acc, string $file) use ($dir, &$line): array {
-            if (!preg_match('/page[0-9]+\.html/', $file)) {
+        return array_reduce($files, function (array $acc, string $file) use ($dir, $book) {
+            if (!preg_match('/\.html$/', $file)) {
                 return $acc;
             }
             $page = intval(preg_replace('/[^0-9]/', '', $file));
             $filepath = "{$dir}/{$file}";
             $this->loadHTMLFile($filepath);
-            $divs = iterator_to_array($this->getElementsByTagName('div'));
-            return array_merge($acc, array_map(function (DOMElement $div) use ($page, &$line): Block {
-                $styles = $this->parseStylesFromElement($div);
-                $text = $div->textContent;
-                return new Block($page, $text, $styles);
-            }, $divs));
+            return array_reduce($this->getBlocks($page), function (array $acc, Block $block) use ($book) {
+                $block->bookId = $book->id ?? null;
+                /** @var Block $last */
+                $last = end($acc);
+                $last && $block->continues($last)
+                    ? $last->append($block)
+                    : array_push($acc, $block);
+                return $acc;
+            }, $acc);
         }, []);
     }
 
     public function loadHTMLFile($filename, $options = 0)
     {
+        libxml_use_internal_errors(true);
         parent::loadHTMLFile($filename, $options);
-        $styles = iterator_to_array($this->getElementsByTagName('style'));
-        $this->styles = array_reduce($styles, function (array $acc, DOMElement $style): array {
+        $this->xPath = new DOMXPath($this);
+        $styles = iterator_to_array($this->xPath->query('//style'));
+        $this->pageStyles = array_reduce($styles, function (array $acc, DOMElement $style): array {
             $lines = explode("\n", trim($style->textContent));
             return array_reduce($lines, function (array $acc, string $line): array {
                 preg_match('/([^{]+) { ([^}]+); }/', $line, $matches);
@@ -79,22 +56,37 @@ class PDFParser extends DOMDocument
                 return [$selector => $this->parseStylesFromText($styles)] + $acc;
             }, $acc);
         }, []);
-        $this->xPath = new DOMXPath($this);
     }
 
     private function parseStylesFromText(string $text): array
     {
         $styles = explode(';', $text);
         return array_reduce($styles, function (array $acc, string $style): array {
-            if (!$style) {
-                return $acc;
+            if ($style) {
+                [$name, $value] = explode(':', $style);
+                return [trim($name) => trim($value)] + $acc;
             }
-            [$name, $value] = explode(':', $style);
-            return [trim($name) => trim($value)] + $acc;
+            return $acc;
         }, []);
     }
 
-    private function parseStylesFromElement(DOMElement $element): array
+    public function getBlocks(int $page): array
+    {
+        $index = 0;
+        $divs = iterator_to_array($this->getElementsByTagName('div'));
+        return array_map(function (DOMElement $div) use (&$index, $page): Block {
+            $styles = $this->getStylesForElement($div);
+            $text = $div->textContent;
+            return new Block([
+                Block::ATTR_PAGE => $page,
+                Block::ATTR_INDEX => $index++,
+                Block::ATTR_TEXT => $text,
+                Block::ATTR_STYLES => $styles,
+            ]);
+        }, $divs);
+    }
+
+    private function getStylesForElement(DOMElement $element): array
     {
         $ids = $this->getNestedAttribute($element, 'id');
         $classes = $this->getNestedAttribute($element, 'class');

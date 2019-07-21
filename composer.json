@@ -1,5 +1,7 @@
 {
-  "name": "samueldavis/msfm",
+  "name": "samueldavis/books",
+  "description": "pdf-to-json (firestore) book converter",
+  "type": "library",
   "authors": [
     {
       "name": "Samuel Davis",
@@ -8,14 +10,13 @@
   ],
   "autoload": {
     "psr-4": {
-      "PDFParser\\": "src/"
-    },
-    "files": [
-      "src/functions.php"
-    ]
+      "Books\\": "src/"
+    }
   },
   "require": {
+    "php": "^7.1",
     "ext-dom": "*",
-    "ext-libxml": "*"
+    "ext-libxml": "*",
+    "google/cloud-firestore": "^1.6"
   }
 }
