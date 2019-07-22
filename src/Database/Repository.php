@@ -27,7 +27,9 @@ class Repository
     public function persist(Model $model): Model
     {
         if (!$model->id) {
-            $model->id = $this->first($model->toArray())->id ?? null;
+            $attributes = $model->toArray();
+            unset($attributes['text']);
+            $model->id = $this->first($attributes)->id ?? null;
         }
         if ($model->id) {
             $document = $this->collection->document($model->id);
